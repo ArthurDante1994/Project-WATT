@@ -22,21 +22,21 @@ Documentar toda a arquitetura de forma reproduzível
 A solução contempla os seguintes componentes:
 
 📡 Ingestão de Dados
-Serviço de coleta de dados em tempo real utilizando Google Pub/Sub
+Serviço de coleta de dados em tempo real utilizando Google Pub/Sub;
 💾 Persistência de Dados
-Armazenamento em banco de dados (relacional ou séries temporais)
+Armazenamento em banco de dados (relacional ou séries temporais);
 🔌 Integração Industrial
 Implementação de servidor utilizando protocolos industriais como:
-Modbus TCP
-Ethernet/IP
+Modbus TCP;
+Ethernet/IP;
 🖥️ Supervisório
-Desenvolvimento de interface no Elipse E3, com tela operacional funcional
+Desenvolvimento de interface no Elipse E3, com tela operacional funcional;
 📊 Análise Técnica
-Elaboração de relatório com interpretações energéticas dos dados coletados
+Elaboração de relatório com interpretações energéticas dos dados coletados;
 🔄 Simulação de Dados
-Criação de um simulador de mensagens compatível com o payload especificado
+Criação de um simulador de mensagens compatível com o payload especificado;
 📚 Documentação
-README detalhado com instruções de execução e descrição da arquitetura do sistema
+README detalhado com instruções de execução e descrição da arquitetura do sistema;
 
 🏗️ Arquitetura
 
