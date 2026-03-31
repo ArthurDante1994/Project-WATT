@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # Configurações do Pub/Sub
 PROJECT_ID = "deeenergyanalysis"
 # ATENÇÃO: Você ainda precisa descobrir esse nome com a WATT!
-SUBSCRIPTION_ID = "membropsel@deeenergyanalysis.iam.gserviceaccount.com"
+SUBSCRIPTION_ID = "Danilo"
 
 # Aliases válidos para identificação do dispositivo conforme documentação
 DEVICE_ID_ALIASES = ["Nome", "deviceId", "device_id", "idDispositivo", "dispositivold", "gatewayId"]
@@ -62,6 +62,10 @@ def process_message(message: pubsub_v1.subscriber.message.Message):
         
         # TODO: Encaminhar o 'payload' normalizado para o Bloco 2 (Persistência em Banco de Dados)
         
+        # ESTA LINHA PARA VER O PAYLOAD COMPLETO:
+        print(json.dumps(payload, indent=4))
+        
+
         # Confirma que a mensagem foi processada corretamente
         message.ack()
 
