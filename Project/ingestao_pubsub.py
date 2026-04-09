@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+import database # <--- Banco de dados
+import servidor_modbus # <--- Servidor Modbus
 from google.cloud import pubsub_v1
 from dotenv import load_dotenv
 
@@ -60,14 +62,25 @@ def process_message(message: pubsub_v1.subscriber.message.Message):
         # Log de sucesso no processamento
         logger.info(f"Leitura processada com sucesso | Dispositivo: {device_id} | RTC: {payload['RTC']} | RTP: {payload['RTP']}")
         
-        # TODO: Encaminhar o 'payload' normalizado para o Bloco 2 (Persistência em Banco de Dados)
+        # Log de sucesso no processamento
+        logger.info(f"Leitura recebida | Dispositivo: {device_id}")
         
+        # SALVA NO BANCO DE DADOS (Bloco 2)
+        try:
+            database.salvar_leitura(device_id, payload)
+            logger.info(f"✅ Dados persistidos no BD para o dispositivo {device_id}")
+        except Exception as db_err:
+            logger.error(f"❌ Falha ao gravar no banco: {db_err}")
+        
+        # ATUALIZA O SERVIDOR MODBUS (Bloco 3)
+        servidor_modbus.atualizar_registradores(payload)
+
         # ESTA LINHA PARA VER O PAYLOAD COMPLETO:
         print(json.dumps(payload, indent=4))
         
-
         # Confirma que a mensagem foi processada corretamente
         message.ack()
+
 
     except json.JSONDecodeError:
         logger.error(f"Falha de validação: Payload não é um JSON válido. Dados brutos: {message.data}")
@@ -88,6 +101,9 @@ def start_subscriber():
     subscription_path = subscriber.subscription_path(PROJECT_ID, SUBSCRIPTION_ID)
 
     logger.info(f"Iniciando serviço de ingestão no tópico: {subscription_path}")
+
+    # Inicia o servidor Modbus
+    servidor_modbus.iniciar_servidor()
     
     # Inicia a escuta contínua de mensagens
     streaming_pull_future = subscriber.subscribe(subscription_path, callback=process_message)
