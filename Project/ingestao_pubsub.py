@@ -6,8 +6,8 @@ import servidor_modbus # <--- Servidor Modbus
 from google.cloud import pubsub_v1
 from dotenv import load_dotenv
 
-# Carrega as variáveis do arquivo .env
-load_dotenv()
+# Carrega as variáveis do arquivo .env e sobrescreve valores antigos do ambiente.
+load_dotenv(override=True)
 
 # Configuração de Logs detalhados para diagnóstico
 logging.basicConfig(
