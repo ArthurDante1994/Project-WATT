@@ -8,11 +8,13 @@ logger = logging.getLogger(__name__)
 DB_PATH = "watt_energia.db"
 
 def init_db():
-    """Inicializa o banco de dados e cria o schema exigido."""
+    """Inicializa o banco de dados com as Primary Keys e Constraints de Unicidade."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    # Tabela 1: Ativos (Dispositivos monitorados)
+    # 1. Tabela de Ativos (Dispositivos)
+    # PRIMARY KEY: id (Autoincrement)
+    # UNIQUE: device_id (Não permite dois medidores com o mesmo nome)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS ativos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,8 +23,9 @@ def init_db():
         )
     ''')
 
-    # Tabela 2: Leituras Históricas
-    # A chave composta UNIQUE(ativo_id, timestamp) evita duplicidade de dados no mesmo instante
+    # 2. Tabela de Leituras Históricas
+    # PRIMARY KEY: id
+    # UNIQUE: (ativo_id, timestamp) -> Chave Composta que evita duplicidade no mesmo segundo
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS leituras_historicas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,8 +39,8 @@ def init_db():
         )
     ''')
 
-    # Tabela 3: Estado Atual
-    # Armazena apenas a última leitura de cada ativo (Inserção idempotente / Upsert)
+    # 3. Tabela de Estado Atual (Tempo Real)
+    # PRIMARY KEY: ativo_id (Cada medidor tem apenas 1 linha com o dado mais recente)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS estado_atual (
             ativo_id INTEGER PRIMARY KEY,
@@ -56,11 +59,11 @@ def get_or_create_ativo(device_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # Tenta inserir. Se já existir (devido ao UNIQUE), ele ignora.
+    # Tenta inserir. Se já existir, ignora devido ao UNIQUE no device_id
     cursor.execute('INSERT OR IGNORE INTO ativos (device_id) VALUES (?)', (device_id,))
     conn.commit()
     
-    # Busca o ID do ativo
+    # Busca o ID numérico (Primary Key) do ativo
     cursor.execute('SELECT id FROM ativos WHERE device_id = ?', (device_id,))
     ativo_id = cursor.fetchone()[0]
     
@@ -69,32 +72,33 @@ def get_or_create_ativo(device_id):
 
 def salvar_leitura(device_id, payload):
     """
-    Persiste os dados usando transações para garantir a integridade.
-    Atualiza o histórico e o estado atual simultaneamente.
+    Persiste os dados usando transações. 
+    USA 'INSERT OR IGNORE' para respeitar a UNIQUE CONSTRAINT de tempo.
     """
-    # Se o payload não trouxer timestamp, geramos um agora
     timestamp = payload.get('timestamp', datetime.now().isoformat())
     rtc = payload.get('RTC', 1.0)
     rtp = payload.get('RTP', 1.0)
     payload_json = json.dumps(payload)
 
+    # Obtém o ID da Primary Key da tabela ativos
     ativo_id = get_or_create_ativo(device_id)
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     try:
-        # Inicia uma transação explícita
         cursor.execute("BEGIN TRANSACTION;")
 
-        # 1. Inserção no Histórico (Evita duplicidade com a restrição UNIQUE)
+        # 1. Inserção no Histórico
+        # Se ativo_id + timestamp já existirem, o IGNORE impede a duplicata
         cursor.execute('''
             INSERT OR IGNORE INTO leituras_historicas 
             (ativo_id, timestamp, rtc, rtp, payload_completo) 
             VALUES (?, ?, ?, ?, ?)
         ''', (ativo_id, timestamp, rtc, rtp, payload_json))
 
-        # 2. Atualização Idempotente do Estado Atual (Upsert)
+        # 2. Atualização do Estado Atual (Upsert)
+        # Aqui a Primary Key (ativo_id) garante que apenas o último dado exista
         cursor.execute('''
             INSERT INTO estado_atual (ativo_id, timestamp_ultima_leitura, payload_completo)
             VALUES (?, ?, ?)
@@ -103,15 +107,14 @@ def salvar_leitura(device_id, payload):
                 payload_completo = excluded.payload_completo
         ''', (ativo_id, timestamp, payload_json))
 
-        # Confirma a transação
         conn.commit()
         
     except Exception as e:
-        conn.rollback() # Se der erro em qualquer tabela, desfaz tudo
+        conn.rollback() 
         logger.error(f"Erro ao salvar leitura no banco: {e}")
         raise
     finally:
         conn.close()
 
-# Executa a criação das tabelas quando o arquivo é importado
+# Inicializa o schema ao carregar o arquivo
 init_db()
