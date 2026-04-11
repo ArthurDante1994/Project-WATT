@@ -12,7 +12,6 @@ Este repositório contém a solução do processo seletivo da WATT Consultoria (
 ## 🚀 Configuração Rápida (Execução do Zero)
 
 ### 1. Preparação do Ambiente
-Abra o terminal na raiz do projeto e execute:
 ```bash
 python -m venv venv
 # Ative o ambiente (Windows)
@@ -21,9 +20,61 @@ python -m venv venv
 pip install google-cloud-pubsub python-dotenv pyModbusTCP
 
 2. Configuração de CredenciaisCrie um arquivo .env na raiz do projeto e aponte para o seu arquivo de credenciais do Google Cloud:PlaintextGOOGLE_APPLICATION_CREDENTIALS="C:\caminho\absoluto\para\sua\chave.json"
-▶️ Como Executar o SistemaA arquitetura foi desenhada para rodar o ingestor, o banco de dados e o servidor Modbus TCP em um único processo principal.Passo 1: Iniciar o Gateway (Servidor)No terminal com o venv ativado, execute:Bashpython Project/ingestao_pubsub.py
+
+No terminal com o venv ativado, execute:
+
+▶️ Como Executar o SistemaA arquitetura foi desenhada para rodar o ingestor, o banco de dados e o servidor Modbus TCP em um único processo principal
+
+Passo 1: Iniciar o Gateway (Servidor)No terminal com o venv ativado, execute:Bashpython Project/ingestao_pubsub.py
+
 O que acontece nos bastidores:O banco de dados watt_energia.db é inicializado automaticamente (Tabelas: ativos, leituras_historicas, estado_atual).O servidor Modbus TCP é iniciado no IP 127.0.0.1, porta 10502 (porta alta escolhida para evitar bloqueios de privilégio administrativo no Windows).A cada leitura recebida da nuvem, os dados são validados, os fatores de escala (RTC/RTP) são aplicados, salvos no banco SQLite (evitando duplicidade com chaves compostas) e os registradores Modbus são atualizados em tempo real.Passo 2: Validar a Comunicação Modbus (Cliente)Para atestar que os dados estão disponíveis para o supervisório (SCADA), abra um segundo terminal (mantenha o primeiro rodando), ative o venv e execute o script de teste de leitura:Bashpython Project/cliente_teste_modbus.py
 Este script atuará como um CLP, conectando-se ao servidor local e lendo a Tensão (Va) diretamente da memória Modbus.📊 Mapa de Memória Modbus TCPTodos os dados elétricos foram convertidos para o padrão Float32 (IEEE 754), ocupando 2 registradores (Words) cada. Os fatores de escala (RTC e RTP) já são aplicados via software antes da disponibilização na memória, conforme a regra de negócio da documentação elétrica.GrandezaDescriçãoEndereço (Holding Register)Tipo de DadoRTCFator de Corrente0 e 1Float32RTPFator de Tensão2 e 3Float32VaTensão Fase A10 e 11Float32VbTensão Fase B12 e 13Float32VcTensão Fase C14 e 15Float32IaCorrente Fase A20 e 21Float32PdirPotência Ativa Direta36 e 37Float32fFrequência50 e 51Float32
+
+Passo 2: instalar o sqliteodbc.exe
+
+No site baixar o sqliteodbc.exe
+http://www.ch-werner.de/sqliteodbc/
+
+Você precisará baixar e instalar um pequeno componente gratuito chamado SQLite ODBC Driver no seu computador. (Geralmente é um arquivo chamado sqliteodbc.exe, mantido por Christian Werner no site oficial do projeto).
+
+Atenção: Como o Elipse Studio geralmente roda em 32-bits, você precisará instalar a versão 32-bits do driver, mesmo que o seu Windows seja 64-bits.
+
+O próximo passo é criar uma "ponte nomeada" (chamada de DSN) dentro do Windows. É essa ponte que o Elipse vai usar para achar o seu arquivo do Python.
+
+Como o Elipse E3 Studio é um software de 32 bits, nós precisamos obrigatoriamente usar o configurador de 32 bits do Windows (mesmo que o seu computador seja de 64 bits).
+
+Aqui está o passo a passo exato para criar essa ponte:
+
+1
+Abra o Administrador ODBC (32 bits)
+A busca do Windows
+Clique no menu Iniciar do seu computador e digite ODBC.
+O Windows vai te mostrar duas opções. Clique obrigatoriamente em "Fontes de Dados ODBC (32 bits)" ou "ODBC Data Sources (32-bit)".
+
+2
+Adicione a Nova Ponte
+Aba DSN de Sistema
+Na janela que abrir, vá para a aba DSN de Sistema (System DSN) na parte superior e clique no botão Adicionar.
+
+3
+Selecione o Driver do SQLite
+O que você acabou de instalar
+Uma lista com vários nomes vai aparecer. Role até o final e procure por SQLite3 ODBC Driver. Selecione ele e clique em Concluir.
+
+4
+Aponte para o Banco do Python
+A configuração final
+Uma pequena janela de configuração vai se abrir. Preencha apenas dois campos:
+
+Data Source Name: Digite WATT_DB (este será o nome oficial da nossa ponte).
+
+Database Name: Clique no botão Browse (Procurar) e navegue pelas suas pastas até encontrar o arquivo .db (ou .sqlite) que o seu script Python está alimentando. Selecione ele.
+
+Deixe o resto em branco e clique em OK para salvar e fechar tudo.
+
+
+O que acabou de acontecer: Você acabou de dizer para o Windows: "Toda vez que um programa pedir para falar com o WATT_DB, traduza a conversa e mande para aquele arquivo específico do Python."
+
 
 ## 🚀 Configuração NOVAS (Execução do Zero)
 

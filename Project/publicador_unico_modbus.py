@@ -31,9 +31,9 @@ def gerar_payload_realista():
     }
     
     # Valores aleatórios dentro dos ranges solicitados
-    va = round(random.uniform(218.0, 226.0), 2)
+    va = round(random.uniform(200.0, 201.0), 2)
     vb = round(random.uniform(218.0, 226.0), 2)
-    vc = round(random.uniform(218.0, 226.0), 2)
+    vc = round(random.uniform(240.0, 245.0), 2)
     
     ia = round(random.uniform(0.0, 80.0), 2)
     ib = round(random.uniform(0.0, 80.0), 2)
